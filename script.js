@@ -1,7 +1,7 @@
-// script.js (전체 코드 - 2025-06-03 모든 기능 포함 최종 버전)
+// script.js (전체 코드 - 2025-06-04 모든 기능 포함, 최종 통합)
 
 // 중요!! 본인의 Apps Script 웹 앱 URL로 반드시 교체하세요.
-const APPS_SCRIPT_WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbwQqLERmT9GvvIQC6xIbbXkgiE_OJfNEFZLNbilhrBpwwvZfh56AEXajVyiSfqWBR_m6w/exec'; // <<--- 여기를 꼭 수정해주세요!!!
+const APPS_SCRIPT_WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbwQqLERmT9GvvIQC6xIbbXkgiE_OJfNEFZLNbilhrBpwwvZfh56AEXajVyiSfqWBR_m6w/exec'; 
 
 document.addEventListener('DOMContentLoaded', () => {
   console.log("DOM 완전히 로드됨. 스크립트 초기화 시작.");
@@ -16,7 +16,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // 근무 입력 모달 관련 요소
   const modal = document.getElementById('workRecordModal');
-  const closeModalBtn = document.getElementById('closeModalBtn'); // 근무 입력 모달 닫기 버튼
+  const closeModalBtn = document.getElementById('closeModalBtn'); 
   const workRecordForm = document.getElementById('workRecordForm');
   const recordDateEl = document.getElementById('recordDate');
   const staffNameEl = document.getElementById('staffName'); 
@@ -29,7 +29,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const notesEl = document.getElementById('notes');
   const modalTitle = document.getElementById('modalTitle');
   const repeatOnWeekdayCheckbox = document.getElementById('repeatOnWeekday');
-  const repeatContainer = document.getElementById('repeatContainer'); // index.html에 <div id="repeatContainer">...</div> 또는 <div class="checkbox-label">의 부모로 사용될 수 있음
+  const repeatContainer = document.getElementById('repeatContainer') || document.querySelector('label[for="repeatOnWeekday"]')?.parentElement; 
   const saveRecordBtn = document.getElementById('saveRecordBtn');
   const leavePeriodFieldsEl = document.getElementById('leavePeriodFields');
   const leaveStartDateEl = document.getElementById('leaveStartDate');
@@ -42,7 +42,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // 통계 모달 관련 DOM 요소
   const statsButton = document.getElementById('statsButton');
   const statsModal = document.getElementById('statsModal');
-  const closeStatsModalBtnElem = document.getElementById('closeStatsModalBtn'); // ID가 중복되지 않도록 index.html에서 "closeStatsModalBtn"으로 수정했다고 가정
+  const closeStatsModalBtnElem = document.getElementById('closeStatsModalBtn'); 
   const statsStaffSelect = document.getElementById('statsStaffSelect'); 
   const statsTableContainer = document.getElementById('statsTableContainer');
   const statsSummaryContainer = document.getElementById('statsSummaryContainer');
@@ -50,7 +50,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // 일일 근무 요약 모달 관련 DOM 요소
   const dailySummaryModal = document.getElementById('dailySummaryModal');
-  const closeDailySummaryModalBtnElem = document.getElementById('closeDailySummaryModalBtn'); // ID가 중복되지 않도록 index.html에서 "closeDailySummaryModalBtn"으로 수정했다고 가정
+  const closeDailySummaryModalBtnElem = document.getElementById('closeDailySummaryModalBtn'); 
   const dailySummaryDateDisplayEl = document.getElementById('dailySummaryDateDisplay');
   const toggleHolidayBtn = document.getElementById('toggleHolidayBtn');
   const dailySummaryWorkListEl = document.getElementById('dailySummaryWorkList');
@@ -60,7 +60,7 @@ document.addEventListener('DOMContentLoaded', () => {
   let staffListCache = []; 
   let currentDisplayedDate = new Date();
   let allRecordsForCurrentMonth = []; 
-  let currentMonthHolidays = []; 
+  let currentMonthHolidays = []; // 서버에서 불러온 휴일 (YYYY-MM-DD 형식)
   let currentEditingRecordOriginalKey = null; 
 
   const TIMELINE_START_HOUR = 9;
@@ -68,7 +68,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const TOTAL_TIMELINE_MINUTES = (TIMELINE_END_HOUR - TIMELINE_START_HOUR) * 60;
   const MAX_STAFF_PER_DAY_DISPLAY = 5; 
   const TRACK_HEIGHT_WITH_GAP = 20; 
-  const MIN_HOURS_FOR_BAR_DISPLAY = 9;
+  const MIN_HOURS_FOR_BAR_DISPLAY = 9; // 요청사항 반영: 최소 9시간 길이
   const WEEKDAYS_KO = ['일', '월', '화', '수', '목', '금', '토'];
 
   function showLoader() { if(loaderEl) loaderEl.style.display = 'block'; console.log("[Util] 로더 표시"); }
@@ -83,13 +83,13 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function populateHourOptions(selectElement) { 
-    if (!selectElement) { console.warn("populateHourOptions: selectElement 없음", selectElement); return; }
+    if (!selectElement) { console.warn("populateHourOptions: selectElement 없음", selectElement?.id); return; }
     selectElement.innerHTML = '';
     for (let i = 0; i < 24; i++) { const option = document.createElement('option'); option.value = String(i).padStart(2, '0'); option.textContent = String(i).padStart(2, '0'); selectElement.appendChild(option); }
   }
 
   function populateMinuteOptions(selectElement) { 
-    if (!selectElement) { console.warn("populateMinuteOptions: selectElement 없음", selectElement); return; }
+    if (!selectElement) { console.warn("populateMinuteOptions: selectElement 없음", selectElement?.id); return; }
     selectElement.innerHTML = '';
     const minutes = [0, 10, 20, 30, 40, 50];
     minutes.forEach(m => { const option = document.createElement('option'); option.value = String(m).padStart(2, '0'); option.textContent = String(m).padStart(2, '0'); selectElement.appendChild(option); });
@@ -132,18 +132,23 @@ document.addEventListener('DOMContentLoaded', () => {
       staffListCache = []; 
     } finally { 
       console.log("[fetchStaffNames] 직원 정보 가져오기 과정 종료."); 
+      // hideLoader(); // renderCalendar에서 최종적으로 숨김
     }
   }
   
   function populateStaffList() { 
-    if (!staffListUlEl) return; staffListUlEl.innerHTML = ''; if (!staffListCache || staffListCache.length === 0) return;
+    if (!staffListUlEl) {console.warn("populateStaffList: staffListUlEl 없음"); return;}
+    staffListUlEl.innerHTML = ''; 
+    if (!staffListCache || staffListCache.length === 0) {console.log("populateStaffList: staffListCache 비어있음"); return;}
     staffListCache.forEach(staff => { const li = document.createElement('li'); li.textContent = staff.name; li.style.backgroundColor = staff.color || '#A0A0A0'; li.style.color = getContrastYIQ(staff.color || '#A0A0A0'); li.dataset.staffName = staff.name; li.addEventListener('click', handleStaffListClick); staffListUlEl.appendChild(li); });
   }
 
   function handleStaffListClick(event) { 
     const clickedStaffName = event.target.dataset.staffName; 
-    const currentActiveLi = staffListUlEl.querySelector('.active-highlight'); if (currentActiveLi) currentActiveLi.classList.remove('active-highlight');
-    if (highlightedStaffName === clickedStaffName) highlightedStaffName = null; else { highlightedStaffName = clickedStaffName; event.target.classList.add('active-highlight');}
+    const currentActiveLi = staffListUlEl ? staffListUlEl.querySelector('.active-highlight') : null; 
+    if (currentActiveLi) currentActiveLi.classList.remove('active-highlight');
+    if (highlightedStaffName === clickedStaffName) highlightedStaffName = null; 
+    else { highlightedStaffName = clickedStaffName; event.target.classList.add('active-highlight');}
     applyCalendarHighlight();
   }
 
@@ -152,68 +157,89 @@ document.addEventListener('DOMContentLoaded', () => {
     allEntries.forEach(entryEl => { const entryTitle = entryEl.title || ""; const entryStaffNameMatch = entryTitle.match(/^([^|]+)\|/); const entryStaffName = entryStaffNameMatch ? entryStaffNameMatch[1].trim() : null; if (highlightedStaffName) { if (entryStaffName && entryStaffName === highlightedStaffName) { entryEl.classList.add('highlighted'); entryEl.classList.remove('dimmed'); } else { entryEl.classList.add('dimmed'); entryEl.classList.remove('highlighted'); } } else { entryEl.classList.remove('highlighted'); entryEl.classList.remove('dimmed'); } });
   }
 
-  function getHolidayStorageKey(year, month_1_based) { return `holidays_${year}-${String(month_1_based).padStart(2, '0')}`; }
-
-  function loadHolidaysForMonth(year, month_1_based) {
-    const key = getHolidayStorageKey(year, month_1_based);
-    try { const stored = localStorage.getItem(key); currentMonthHolidays = stored ? JSON.parse(stored) : []; } 
-    catch (e) { console.error("localStorage 휴일 로드 오류:", e); currentMonthHolidays = []; }
-    console.log(`[loadHolidays] ${year}-${month_1_based} 휴일 로드:`, currentMonthHolidays);
-  }
-
-  function saveHolidaysForMonth(year, month_1_based) {
-    const key = getHolidayStorageKey(year, month_1_based);
-    try { localStorage.setItem(key, JSON.stringify(currentMonthHolidays)); } 
-    catch (e) { console.error("localStorage 휴일 저장 오류:", e); showStatusMessage("휴일 정보 저장 실패.", false); }
-    console.log(`[saveHolidays] ${year}-${month_1_based} 휴일 저장:`, currentMonthHolidays);
-  }
-  
-  function toggleHoliday(dateStr, dayNumberElementOnCalendar) { 
+  // 휴일 설정은 서버와 통신 (localStorage 로직은 제거)
+  async function toggleHoliday(dateStr, dayNumberElementOnCalendar) { 
     console.log(`[toggleHoliday] 호출됨: ${dateStr}`);
-    const year = parseInt(dateStr.substring(0, 4)); const month_1_based = parseInt(dateStr.substring(5, 7));
-    const holidayIndex = currentMonthHolidays.indexOf(dateStr); const dateObj = new Date(dateStr + "T00:00:00"); const isSunday = dateObj.getDay() === 0;
-    if (holidayIndex > -1) { currentMonthHolidays.splice(holidayIndex, 1); if(dayNumberElementOnCalendar) dayNumberElementOnCalendar.classList.remove('holiday-date-number'); if (isSunday && dayNumberElementOnCalendar) dayNumberElementOnCalendar.classList.add('sunday-date-number'); } 
-    else { currentMonthHolidays.push(dateStr); if(dayNumberElementOnCalendar) dayNumberElementOnCalendar.classList.add('holiday-date-number'); if (isSunday && dayNumberElementOnCalendar) dayNumberElementOnCalendar.classList.remove('sunday-date-number'); }
-    saveHolidaysForMonth(year, month_1_based); 
-    if (dailySummaryModal && dailySummaryModal.style.display === 'block' && dailySummaryDateDisplayEl && dailySummaryDateDisplayEl.dataset.currentDate === dateStr) {
-        updateHolidayButtonInPopup(dateStr);
+    const isCurrentlyHoliday = currentMonthHolidays.includes(dateStr);
+    const newHolidayState = !isCurrentlyHoliday; 
+
+    showLoader();
+    try {
+        const payload = { action: 'setHoliday', date: dateStr, status: newHolidayState };
+        console.log("[toggleHoliday] 서버 요청:", payload);
+        const response = await fetch(APPS_SCRIPT_WEB_APP_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+            body: JSON.stringify(payload)
+        });
+        if (!response.ok) {
+            const errorText = await response.text();
+            throw new Error(`서버 오류 ${response.status}: ${errorText}`);
+        }
+        const result = await response.json();
+        console.log("[toggleHoliday] 서버 응답:", result);
+        if (result.success) {
+            showStatusMessage(result.message || `휴일 상태가 ${newHolidayState ? '지정' : '해제'}되었습니다.`, true);
+            // 성공 시 달력을 다시 그려서 최신 휴일 정보 반영
+            // (currentMonthHolidays는 renderCalendar가 서버에서 새로 받아오므로 여기서 직접 조작 안 함)
+            await renderCalendar(currentDisplayedDate.getFullYear(), currentDisplayedDate.getMonth() + 1); 
+            
+            // 일일 요약 팝업이 열려있으면 그 안의 버튼 상태도 업데이트
+            // renderCalendar가 currentMonthHolidays를 업데이트하므로, 팝업은 다시 열리거나,
+            // 현재 열린 팝업의 버튼 상태만 아래와 같이 즉시 업데이트 가능 (renderCalendar가 await이므로 이 시점엔 이미 새 정보)
+            if (dailySummaryModal && dailySummaryModal.style.display === 'block' && 
+                dailySummaryDateDisplayEl && dailySummaryDateDisplayEl.dataset.currentDate === dateStr) {
+                updateHolidayButtonInPopup(dateStr); 
+            }
+        } else {
+            throw new Error(result.error || "휴일 상태 변경 실패.");
+        }
+    } catch (error) {
+        console.error("Error toggling holiday on server:", error);
+        showStatusMessage("휴일 상태 변경 중 오류 발생: " + error.message, false);
+    } finally {
+        hideLoader();
     }
   }
 
   async function renderCalendar(year, month_1_based) { 
     console.log(`[renderCalendar] 시작: ${year}년 ${month_1_based}월`); 
     showLoader(); 
-    if (!calendarEl || !currentMonthYearEl) { console.error("Calendar elements not found!"); hideLoader(); return; } 
+    if (!calendarEl || !currentMonthYearEl) { console.error("RenderCalendar: Calendar elements not found!"); hideLoader(); return; } 
     calendarEl.innerHTML = ''; currentMonthYearEl.textContent = `${year}년 ${month_1_based}월`; 
-    loadHolidaysForMonth(year, month_1_based); 
+    
+    // 날짜 셀 DOM 구조 먼저 생성
     WEEKDAYS_KO.forEach((day, index) => { const dayHeader = document.createElement('div'); dayHeader.classList.add('calendar-header'); dayHeader.textContent = day; if (index === 0) dayHeader.classList.add('sunday'); if (index === 6) dayHeader.classList.add('saturday'); calendarEl.appendChild(dayHeader); }); 
-    const firstDayOfMonth = new Date(year, month_1_based - 1, 1); const lastDayOfMonth = new Date(year, month_1_based, 0); const daysInMonth = lastDayOfMonth.getDate(); const startDayOfWeek = firstDayOfMonth.getDay(); 
+    const firstDayOfMonth = new Date(year, month_1_based - 1, 1); 
+    const lastDayOfMonth = new Date(year, month_1_based, 0); 
+    const daysInMonth = lastDayOfMonth.getDate(); 
+    const startDayOfWeek = firstDayOfMonth.getDay(); 
     for (let i = 0; i < startDayOfWeek; i++) { const emptyCell = document.createElement('div'); emptyCell.classList.add('calendar-day', 'other-month'); calendarEl.appendChild(emptyCell); } 
+    
     for (let day = 1; day <= daysInMonth; day++) { 
       const dayCell = document.createElement('div'); dayCell.classList.add('calendar-day'); 
       const currentDateObj = new Date(year, month_1_based - 1, day); 
       const dateStr = `${year}-${String(month_1_based).padStart(2, '0')}-${String(day).padStart(2, '0')}`; 
       const dayNumberEl = document.createElement('span'); dayNumberEl.classList.add('day-number'); dayNumberEl.textContent = day; 
-      if (currentMonthHolidays.includes(dateStr)) dayNumberEl.classList.add('holiday-date-number');
+      // 휴일 클래스는 서버 데이터 수신 후 적용하므로 여기서는 일단 추가 안 함
       dayNumberEl.addEventListener('click', (event) => { event.stopPropagation(); openDailySummaryPopup(dateStr, dayNumberEl); }); 
       dayCell.appendChild(dayNumberEl); 
       const dayOfWeekVal = currentDateObj.getDay(); 
-      if (!dayNumberEl.classList.contains('holiday-date-number')) { if (dayOfWeekVal === 0) dayNumberEl.classList.add('sunday-date-number'); } 
-      if (dayOfWeekVal === 6) { if (!dayNumberEl.classList.contains('holiday-date-number')) dayCell.classList.add('saturday'); } 
+      // 기본 요일 스타일
+      if (dayOfWeekVal === 0) dayNumberEl.classList.add('sunday-date-number'); 
+      if (dayOfWeekVal === 6) dayCell.classList.add('saturday'); 
       const today = new Date(); 
-      if (year === today.getFullYear() && (month_1_based - 1) === today.getMonth() && day === today.getDate()) { dayCell.classList.add('today'); if (!dayNumberEl.classList.contains('holiday-date-number')) dayNumberEl.classList.add('today-number'); } 
+      if (year === today.getFullYear() && (month_1_based - 1) === today.getMonth() && day === today.getDate()) { 
+        dayCell.classList.add('today'); dayNumberEl.classList.add('today-number'); 
+      } 
       const entriesContainer = document.createElement('div'); entriesContainer.classList.add('work-entries-container'); dayCell.appendChild(entriesContainer); 
       dayCell.dataset.date = dateStr; 
       dayCell.addEventListener('click', (event) => { 
-        console.log("[renderCalendar] Day cell clicked. Target:", event.target);
-        if (event.target === dayCell || event.target === entriesContainer ) {
-            console.log("[renderCalendar] Opening modal for new record on date:", dateStr);
-            openModalForDate(dateStr); 
-        }
+        if (event.target === dayCell || event.target === entriesContainer ) openModalForDate(dateStr); 
       }); 
       calendarEl.appendChild(dayCell); 
     } 
-    console.log(`[renderCalendar] 달력 구조 생성 완료. 근무 기록 가져오기 시도: ${year}-${month_1_based}`);
+    console.log(`[renderCalendar] 달력 구조 생성 완료. 근무 기록 및 휴일 정보 가져오기 시도: ${year}-${month_1_based}`);
     try { 
       const fetchUrl = `${APPS_SCRIPT_WEB_APP_URL}?action=getWorkRecords&year=${year}&month=${month_1_based}`;
       console.log('[renderCalendar] Fetch URL:', fetchUrl);
@@ -221,20 +247,55 @@ document.addEventListener('DOMContentLoaded', () => {
       console.log('[renderCalendar] Fetch 응답 상태:', response.status, response.ok); 
       if (!response.ok) { const errorText = await response.text(); console.error('[renderCalendar] Fetch 실패. 상태:', response.status, '응답 내용:', errorText); throw new Error(`[${response.status}] ${response.statusText}. 서버 상세: ${errorText}`); } 
       const result = await response.json(); 
-      console.log('[renderCalendar] 파싱된 JSON 결과 (구조):', {success: result.success, dataLength: result.data ? result.data.length : 'N/A', error: result.error, details: result.details, debug_info_length: result.debug_info ? result.debug_info.length : 'N/A' }); 
+      console.log('[renderCalendar] 파싱된 JSON 결과 (구조):', {success: result.success, dataLength: result.data ? result.data.length : 'N/A', holidaysLength: result.holidays ? result.holidays.length : 'N/A', error: result.error }); 
       if (result.debug_info && result.debug_info.length > 0) { 
           console.warn("[renderCalendar] 서버 DEBUG INFO:"); 
           result.debug_info.forEach(d => { console.warn(`  Row ${d.row_num_in_sheet || d.row}: Raw='${d.colA_raw_value || d.rawDateCell}', Type=${d.colA_type || d.type}, IsDateObj=${d.colA_is_instanceof_date || d.isDateObjViaInstanceof}, ParsedStatus=${d.colA_parsed_status || d.parsed}, finalDate='${d.colA_final_yyyyMMdd || d.finalDateForClient}', Name='${d.colB_name_raw_value || d.raw_B_name}', WorkType='${d.colC_workType_raw_value || d.raw_C_type}'`); });
       } 
       if (!result.success) { console.error('[renderCalendar] API 응답 success:false. 오류:', result.error, '상세:', result.details); throw new Error(result.error || 'API로부터 근무 기록 로딩 실패.'); } 
+      
       allRecordsForCurrentMonth = result.data || []; 
-      console.log(`[renderCalendar] 이번 달 기록 (${allRecordsForCurrentMonth.length}개) 처리 시작.`); 
+      currentMonthHolidays = result.holidays || []; 
+      console.log(`[renderCalendar] 이번 달 기록 (${allRecordsForCurrentMonth.length}개), 휴일 (${currentMonthHolidays.length}개) 처리 시작.`); 
+      
+      // 서버에서 받은 휴일 정보로 달력 DOM 다시 스타일링
+      calendarEl.querySelectorAll('.calendar-day .day-number').forEach(dnEl => {
+        const parentCellDate = dnEl.closest('.calendar-day').dataset.date;
+        // 먼저 모든 휴일/일요일/오늘 관련 특별 스타일 초기화
+        dnEl.classList.remove('holiday-date-number', 'sunday-date-number', 'today-number');
+        const parentCell = dnEl.closest('.calendar-day');
+        parentCell.classList.remove('saturday', 'today');
+
+
+        // 기본 요일 스타일 적용
+        const dateObj = new Date(parentCellDate + "T00:00:00");
+        if (dateObj.getDay() === 0) dnEl.classList.add('sunday-date-number');
+        if (dateObj.getDay() === 6) parentCell.classList.add('saturday'); // 토요일은 셀에 클래스
+
+        // 오늘 날짜 스타일 적용
+        const todayDate = new Date();
+        if (dateObj.getFullYear() === todayDate.getFullYear() && dateObj.getMonth() === todayDate.getMonth() && dateObj.getDate() === todayDate.getDate()) {
+            parentCell.classList.add('today');
+            dnEl.classList.add('today-number');
+        }
+        
+        // 최종적으로 휴일 스타일 덮어쓰기
+        if (currentMonthHolidays.includes(parentCellDate)) {
+            dnEl.classList.add('holiday-date-number');
+            // 휴일이면 다른 색상 스타일보다 우선 (CSS에서 !important 또는 더 구체적인 선택자 사용)
+            if (dnEl.classList.contains('sunday-date-number')) dnEl.classList.remove('sunday-date-number');
+            if (dnEl.classList.contains('today-number')) dnEl.classList.remove('today-number'); 
+            // 토요일 셀의 .day-number는 CSS에서 .saturday .day-number로 스타일링 되므로, holiday-date-number가 우선 적용됨
+        }
+      });
+
       displayWorkRecords(allRecordsForCurrentMonth); 
       applyCalendarHighlight(); 
       console.log('[renderCalendar] 달력 표시 및 하이라이트 적용 완료.'); 
     } catch (error) { 
       console.error('[renderCalendar] CATCH 블록. 근무 기록 가져오기/처리 중 오류:', error.message, error.stack); 
       allRecordsForCurrentMonth = []; 
+      currentMonthHolidays = []; 
       showStatusMessage('근무 기록 로딩 실패: ' + error.message, false); 
     } finally { 
       console.log('[renderCalendar] Fetch 과정 또는 오류 처리 종료, 로더 숨김.'); 
@@ -242,76 +303,142 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
   
-  function displayWorkRecords(records) {
-    if (!Array.isArray(records)) { console.warn("[displayWorkRecords] records는 배열이 아님.", records); return; }
+  // script.js (displayWorkRecords 함수 수정, 나머지는 이전 최종본과 동일)
+
+// ... (파일 상단, 다른 함수 정의들은 이전과 동일하게 유지) ...
+
+function displayWorkRecords(records) {
+    if (!Array.isArray(records)) {
+        console.warn("[displayWorkRecords] records는 배열이 아님.", records);
+        return;
+    }
+    // console.log("[displayWorkRecords] 표시할 기록 수:", records.length, "첫번째 기록 샘플:", JSON.stringify(records[0]));
+
     const recordsByDate = {};
-    records.forEach(record => { if (record && typeof record.date === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(record.date.substring(0,10))) { const validDateStr = record.date.substring(0,10); (recordsByDate[validDateStr] = recordsByDate[validDateStr] || []).push(record); } else { console.warn("[displayWorkRecords] 유효하지 않은 날짜 형식 기록 건너뜀:", record); } });
-    if (calendarEl) { const allEntriesContainers = calendarEl.querySelectorAll('.work-entries-container'); allEntriesContainers.forEach(container => container.innerHTML = ''); }
-    Object.keys(recordsByDate).forEach(dateStr => {
-      const dayRecords = recordsByDate[dateStr];
-      const dayCellContentContainer = calendarEl ? calendarEl.querySelector(`.calendar-day[data-date="${dateStr}"] .work-entries-container`) : null;
-      if (!dayCellContentContainer) { console.warn(`[displayWorkRecords] 날짜 ${dateStr}에 대한 컨테이너 못찾음`); return; }
-      const staffToTrackMap = new Map(); let nextAvailableTrack = 0;
-      dayRecords.sort((a,b) => { if (a.workType === "휴가" || a.workType === "휴무") { if (b.workType !== "휴가" && b.workType !== "휴무") return 1;} else if (b.workType === "휴가" || b.workType === "휴무") return -1; const startTimeCompare = (a.startTime || "99:99").localeCompare(b.startTime || "99:99"); if (startTimeCompare !== 0) return startTimeCompare; return (a.name || "").localeCompare(b.name || ""); });
-      dayRecords.forEach(record => {
-        if (nextAvailableTrack >= MAX_STAFF_PER_DAY_DISPLAY && !staffToTrackMap.has(record.name)) return;
-        const staffMember = staffListCache.find(s => s.name === record.name); const staffColor = staffMember ? (staffMember.color || '#A0A0A0') : '#A0A0A0';
-        const entryEl = document.createElement('div'); entryEl.classList.add('work-entry'); entryEl.style.backgroundColor = staffColor;
-        const recordIdentifier = { date: record.date, name: record.name, workType: record.workType, startTime: record.startTime || "" };
-        entryEl.dataset.recordIdentifier = JSON.stringify(recordIdentifier); entryEl.dataset.recordData = JSON.stringify(record);
-        entryEl.title = `${record.name} | ${record.workType}` + (record.startTime && record.workType !== "휴가" && record.workType !== "휴무" ? ` | ${record.startTime}-${record.endTime}` : '') + (record.notes ? ` | 비고: ${record.notes}` : '');
-        entryEl.addEventListener('click', (event) => { 
-            console.log("[displayWorkRecords] work-entry 클릭됨. Target:", event.target);
-            if (event.target.classList.contains('delete-btn')) return; 
-            event.stopPropagation(); openModalForEdit(entryEl); 
-        });
-        const deleteBtn = document.createElement('span'); deleteBtn.classList.add('delete-btn'); deleteBtn.innerHTML = '&times;'; deleteBtn.title = '이 기록 삭제';
-        deleteBtn.addEventListener('click', (event) => { event.stopPropagation(); const identifierString = entryEl.dataset.recordIdentifier; if (confirm("정말로 이 근무 기록을 삭제하시겠습니까?")) handleDeleteRecord(identifierString); });
-        let currentTrack;
-        if (staffToTrackMap.has(record.name)) currentTrack = staffToTrackMap.get(record.name); else if (nextAvailableTrack < MAX_STAFF_PER_DAY_DISPLAY) { currentTrack = nextAvailableTrack; staffToTrackMap.set(record.name, currentTrack); nextAvailableTrack++; } else return;
-        entryEl.style.top = `${currentTrack * TRACK_HEIGHT_WITH_GAP}px`;
-        let textContentForBar = "";
-        if (record.workType === "휴가" || record.workType === "휴무") { entryEl.classList.add('vacation'); textContentForBar = `${record.name}: ${record.workType}`; entryEl.textContent = textContentForBar; entryEl.appendChild(deleteBtn); }
-        else if (!record.startTime || !record.endTime || TOTAL_TIMELINE_MINUTES <= 0 || !/^\d{2}:\d{2}$/.test(record.startTime) || !/^\d{2}:\d{2}$/.test(record.endTime) ) { textContentForBar = `${record.name}: ${record.workType || '(시간없음)'}`; entryEl.textContent = textContentForBar; entryEl.appendChild(deleteBtn); entryEl.style.position = 'relative'; entryEl.style.width = '100%'; }
-        else { 
-          const timeToMinutes = (timeStr) => { const [h, m] = timeStr.split(':').map(Number); return h * 60 + m; };
-          const actualRecordStartMinutes = timeToMinutes(record.startTime); const actualRecordEndMinutes = timeToMinutes(record.endTime);
-          const timelineStartTotalMinutes = TIMELINE_START_HOUR * 60;
-          let actualStartOffsetMinutes = actualRecordStartMinutes - timelineStartTotalMinutes;
-          let actualDurationMinutes = actualRecordEndMinutes - actualRecordStartMinutes;
-          if (actualDurationMinutes < 0 && actualRecordStartMinutes > actualRecordEndMinutes) { actualDurationMinutes = (24*60 - actualRecordStartMinutes) + actualRecordEndMinutes; } 
-          if (actualDurationMinutes < 0) actualDurationMinutes = 0;
-          let displayActualStartOffsetMinutes = Math.max(0, actualStartOffsetMinutes);
-          let displayActualEndOffsetMinutes = Math.min(TOTAL_TIMELINE_MINUTES, actualStartOffsetMinutes + actualDurationMinutes);
-          let displayActualDurationMinutes = Math.max(0, displayActualEndOffsetMinutes - displayActualStartOffsetMinutes);
-          if (displayActualDurationMinutes <= 0 && actualDurationMinutes > 0) { 
-             textContentForBar = `${record.startTime}-${record.endTime}`; 
-             entryEl.textContent = textContentForBar; entryEl.appendChild(deleteBtn);
-             entryEl.style.position = 'relative'; entryEl.style.width = '100%'; entryEl.title += ` (타임라인 범위 벗어남)`; 
-          } else if (displayActualDurationMinutes > 0) {
-            const minVisualDurationMinutes = MIN_HOURS_FOR_BAR_DISPLAY * 60;
-            let visualDurationMinutes = Math.max(displayActualDurationMinutes, minVisualDurationMinutes);
-            let visualStartOffsetMinutes = displayActualEndOffsetMinutes - visualDurationMinutes; 
-            visualStartOffsetMinutes = Math.max(0, visualStartOffsetMinutes); 
-            let visualEndOffsetMinutes = Math.min(TOTAL_TIMELINE_MINUTES, visualStartOffsetMinutes + visualDurationMinutes);
-            const finalDisplayDurationMinutes = visualEndOffsetMinutes - visualStartOffsetMinutes;
-            const finalDisplayStartOffsetMinutes = visualStartOffsetMinutes;
-            if (finalDisplayDurationMinutes <= 0) { textContentForBar = `${record.startTime}-${record.endTime}`; entryEl.textContent = textContentForBar; entryEl.appendChild(deleteBtn); entryEl.style.position = 'relative'; entryEl.style.width = '100%'; } 
-            else {
-                const leftPercentage = (finalDisplayStartOffsetMinutes / TOTAL_TIMELINE_MINUTES) * 100;
-                const widthPercentage = (finalDisplayDurationMinutes / TOTAL_TIMELINE_MINUTES) * 100;
-                entryEl.style.left = `${Math.max(0, Math.min(100, leftPercentage))}%`; entryEl.style.width = `${Math.max(0, Math.min(100 - leftPercentage, widthPercentage))}%`;
-                const barWidthPx = (dayCellContentContainer.clientWidth || 100) * (widthPercentage / 100);
-                if (barWidthPx < 20) textContentForBar = '&nbsp;'; else if (barWidthPx < 70) textContentForBar = `${record.startTime.substring(0,2)}-${record.endTime.substring(0,2)}`; else textContentForBar = `${record.startTime}-${record.endTime}`; 
-                if (textContentForBar === '&nbsp;') entryEl.innerHTML = textContentForBar; else entryEl.textContent = textContentForBar;
-                entryEl.appendChild(deleteBtn);
-            }
-          } else { textContentForBar = `${record.name}: ${record.workType}`; entryEl.textContent = textContentForBar; entryEl.appendChild(deleteBtn); entryEl.style.position = 'relative'; entryEl.style.width = '100%'; }
+    records.forEach(record => {
+        if (record && typeof record.date === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(record.date.substring(0, 10))) {
+            const validDateStr = record.date.substring(0, 10);
+            (recordsByDate[validDateStr] = recordsByDate[validDateStr] || []).push(record);
+        } else {
+            console.warn("[displayWorkRecords] 유효하지 않은 날짜 형식 기록 건너뜀:", record);
         }
-        dayCellContentContainer.appendChild(entryEl);
-      });
     });
-  }
+
+    if (calendarEl) {
+        const allEntriesContainers = calendarEl.querySelectorAll('.work-entries-container');
+        allEntriesContainers.forEach(container => container.innerHTML = '');
+    }
+
+    Object.keys(recordsByDate).forEach(dateStr => {
+        const dayRecords = recordsByDate[dateStr];
+        const dayCellContentContainer = calendarEl ? calendarEl.querySelector(`.calendar-day[data-date="${dateStr}"] .work-entries-container`) : null;
+        
+        if (!dayCellContentContainer) {
+            console.warn(`[displayWorkRecords] 날짜 ${dateStr}에 대한 컨테이너 못찾음`);
+            return;
+        }
+
+        const staffToTrackMap = new Map();
+        let nextAvailableTrack = 0;
+
+        // 정렬: 휴가/휴무를 아래로, 나머지는 이름 -> 시간 순으로 (표시 순서 일관성)
+        dayRecords.sort((a, b) => {
+            const typeAOrder = (a.workType === "휴가" || a.workType === "휴무") ? 1 : 0;
+            const typeBOrder = (b.workType === "휴가" || b.workType === "휴무") ? 1 : 0;
+            if (typeAOrder !== typeBOrder) return typeAOrder - typeBOrder;
+            
+            const nameCompare = (a.name || "").localeCompare(b.name || "");
+            if (nameCompare !== 0) return nameCompare;
+            
+            return (a.startTime || "99:99").localeCompare(b.startTime || "99:99");
+        });
+
+        dayRecords.forEach(record => {
+            if (nextAvailableTrack >= MAX_STAFF_PER_DAY_DISPLAY && !staffToTrackMap.has(record.name)) {
+                // 한 날짜에 이미 최대 인원이 표시되었고, 새로운 직원이면 더 이상 그리지 않음
+                // (같은 직원의 여러 기록은 같은 트랙에 그려질 수 있으나, 현재 로직은 직원별 한 줄)
+                return;
+            }
+
+            const staffMember = staffListCache.find(s => s.name === record.name);
+            const staffColor = staffMember ? (staffMember.color || '#A0A0A0') : '#A0A0A0';
+
+            const entryEl = document.createElement('div');
+            entryEl.classList.add('work-entry');
+            entryEl.style.backgroundColor = staffColor;
+
+            const recordIdentifier = { date: record.date, name: record.name, workType: record.workType, startTime: record.startTime || "" };
+            entryEl.dataset.recordIdentifier = JSON.stringify(recordIdentifier);
+            entryEl.dataset.recordData = JSON.stringify(record);
+            
+            // 툴팁은 상세 정보 유지
+            entryEl.title = `${record.name} | ${record.workType}` +
+                            (record.startTime && record.workType !== "휴가" && record.workType !== "휴무" ? ` | ${record.startTime}-${record.endTime}` : '') +
+                            (record.notes ? ` | 비고: ${record.notes}` : '');
+
+            entryEl.addEventListener('click', (event) => {
+                if (event.target.classList.contains('delete-btn')) return;
+                event.stopPropagation();
+                openModalForEdit(entryEl);
+            });
+
+            const deleteBtn = document.createElement('span');
+            deleteBtn.classList.add('delete-btn');
+            deleteBtn.innerHTML = '&times;';
+            deleteBtn.title = '이 기록 삭제';
+            deleteBtn.addEventListener('click', (event) => {
+                event.stopPropagation();
+                const identifierString = entryEl.dataset.recordIdentifier;
+                if (confirm("정말로 이 근무 기록을 삭제하시겠습니까?")) {
+                    handleDeleteRecord(identifierString);
+                }
+            });
+
+            let currentTrack;
+            // 각 직원에게 고유 트랙 할당 (한 직원이 하루에 여러 근무를 가질 경우 이 로직은 첫번째 근무에만 트랙 할당)
+            // 현재는 한 직원당 하루 하나의 막대(또는 텍스트 라인)를 가정
+            if (staffToTrackMap.has(record.name)) {
+                currentTrack = staffToTrackMap.get(record.name);
+            } else if (nextAvailableTrack < MAX_STAFF_PER_DAY_DISPLAY) {
+                currentTrack = nextAvailableTrack;
+                staffToTrackMap.set(record.name, currentTrack);
+                nextAvailableTrack++;
+            } else {
+                return; // 표시할 트랙 없음
+            }
+            entryEl.style.top = `${currentTrack * TRACK_HEIGHT_WITH_GAP}px`;
+
+            if (record.workType === "휴가" || record.workType === "휴무") {
+                entryEl.classList.add('vacation'); // 'vacation' 클래스로 텍스트 스타일링
+                entryEl.textContent = `${record.name}: ${record.workType}`;
+                entryEl.style.position = 'relative'; // 타임라인과 무관하게 전체 너비
+                entryEl.style.width = '100%';
+                entryEl.style.left = '0';
+            } else if (record.startTime && record.endTime && /^\d{2}:\d{2}$/.test(record.startTime) && /^\d{2}:\d{2}$/.test(record.endTime)) {
+                // 주간, 마감 등 시간 정보가 있는 근무
+                entryEl.style.left = '0%';
+                entryEl.style.width = '100%'; // 요청사항: 최대 길이로 통일
+                entryEl.textContent = `${record.name} ${record.startTime}-${record.endTime}`;
+            } else {
+                // 시간 정보가 없거나 유효하지 않은 그 외 경우 (예: 이름만 있거나 유형만 있는 데이터)
+                entryEl.textContent = `${record.name}: ${record.workType || '(정보부족)'}`;
+                entryEl.style.position = 'relative';
+                entryEl.style.width = '100%';
+                entryEl.style.left = '0';
+            }
+            entryEl.appendChild(deleteBtn); // 모든 경우에 삭제 버튼 추가
+            dayCellContentContainer.appendChild(entryEl);
+          });
+    });
+    // 함수가 끝날 때 하이라이트 상태를 다시 적용할 수 있음 (선택사항)
+    // applyCalendarHighlight(); 
+    // -> renderCalendar 마지막에 이미 호출되므로 중복 호출 불필요
+}
+
+// ... (script.js의 나머지 함수들: handleDeleteRecord, openModalForDate, openModalForEdit, 
+//      모달 닫기 관련, toggleTimeFields, 폼 제출 리스너, 일일 요약 팝업 관련, 통계 모달 관련, 
+//      이전/다음 달 버튼, initializeApp 등은 이전 최종본과 동일하게 유지합니다.) ...
+// (가장 최근에 드린 script.js 전체 코드에서 해당 함수들을 가져오시면 됩니다.)
 
   async function handleDeleteRecord(identifierString) { 
     console.log("[handleDeleteRecord] 호출됨. Identifier:", identifierString);
@@ -319,75 +446,57 @@ document.addEventListener('DOMContentLoaded', () => {
     try { const keyObject = JSON.parse(identifierString); const payload = { action: 'deleteWorkRecord', key: keyObject }; const response = await fetch(APPS_SCRIPT_WEB_APP_URL, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify(payload) }); if (!response.ok) { const errorText = await response.text(); throw new Error(`서버 오류 ${response.status}: ${errorText}`);} const result = await response.json(); if (result.success) { showStatusMessage(result.message || "기록 삭제됨.", true); renderCalendar(currentDisplayedDate.getFullYear(), currentDisplayedDate.getMonth() + 1); } else { throw new Error(result.error || "삭제 실패."); } } catch (error) { console.error('Error deleting record:', error); showStatusMessage('삭제 중 오류: ' + error.message, false); } finally { hideLoader(); }
   }
 
-  // script.js (openModalForDate 함수 수정)
-
-function openModalForDate(dateStr, existingRecordDataWithIdentifier = null) { 
-  console.log("[openModalForDate] 호출됨. Date:", dateStr, "ExistingRecord:", existingRecordDataWithIdentifier);
-
-  // 각 DOM 요소 확인 및 로깅
-  const elementsToVerify = {
-    workRecordForm, recordDateEl, modalTitle, repeatOnWeekdayCheckbox, saveRecordBtn, 
-    staffNameEl, workTypeEl, startHourEl, startMinuteEl, endHourEl, endMinuteEl, 
-    notesEl, leavePeriodFieldsEl, leaveStartDateEl, leaveEndDateEl, timeFieldsEl, 
-    repeatContainer, modal // modal 자체도 확인
-  };
-
-  let missingElement = null;
-  for (const key in elementsToVerify) {
-    if (!elementsToVerify[key]) {
-      missingElement = key;
-      break;
+  function openModalForDate(dateStr, existingRecordDataWithIdentifier = null) { 
+    console.log("[openModalForDate] 호출됨. Date:", dateStr, "ExistingRecord:", existingRecordDataWithIdentifier);
+    if (!workRecordForm || !modal) { console.error("openModalForDate: workRecordForm 또는 modal 없음"); return; }
+    
+    workRecordForm.reset(); 
+    if(repeatOnWeekdayCheckbox) repeatOnWeekdayCheckbox.checked = false; 
+    if(notesEl) notesEl.value = ""; 
+    
+    if (existingRecordDataWithIdentifier) { 
+      const existingRecord = existingRecordDataWithIdentifier; 
+      if(modalTitle) modalTitle.textContent = `${existingRecord.date} 근무 기록 수정`; 
+      if(recordDateEl) recordDateEl.value = existingRecord.date; 
+      if(staffNameEl) staffNameEl.value = existingRecord.name; 
+      if(workTypeEl) workTypeEl.value = existingRecord.workType;
+      
+      if (existingRecord.workType === '휴무') {
+        if(leaveStartDateEl) leaveStartDateEl.value = existingRecord.date; 
+        if(leaveEndDateEl) leaveEndDateEl.value = existingRecord.date;  
+      } else if (existingRecord.workType !== '휴가') { 
+        if (startHourEl && startMinuteEl) {
+            if (existingRecord.startTime && /^\d{2}:\d{2}$/.test(existingRecord.startTime)) { const [startH, startM] = existingRecord.startTime.split(':'); startHourEl.value = startH; startMinuteEl.value = startM; } else { startHourEl.value = "00"; startMinuteEl.value = "00";}
+        }
+        if (endHourEl && endMinuteEl) {
+            if (existingRecord.endTime && /^\d{2}:\d{2}$/.test(existingRecord.endTime)) { const [endH, endM] = existingRecord.endTime.split(':'); endHourEl.value = endH; endMinuteEl.value = endM; } else { endHourEl.value = "00"; endMinuteEl.value = "00";}
+        }
+      } else { 
+        if(startHourEl) startHourEl.value = "00"; if(startMinuteEl) startMinuteEl.value = "00"; 
+        if(endHourEl) endHourEl.value = "00"; if(endMinuteEl) endMinuteEl.value = "00"; 
+      }
+      if(notesEl) notesEl.value = existingRecord.notes || ""; 
+      if(workRecordForm) workRecordForm.dataset.mode = "edit"; 
+      try { currentEditingRecordOriginalKey = JSON.parse(existingRecord.identifier); } catch(e) { currentEditingRecordOriginalKey = null; }
+      if(saveRecordBtn) saveRecordBtn.textContent = "수정";
+    } else { 
+      if(modalTitle) modalTitle.textContent = `${dateStr} 근무 기록 추가`; 
+      if(recordDateEl) recordDateEl.value = dateStr;
+      if(staffNameEl) staffNameEl.value = ""; 
+      if(workTypeEl) workTypeEl.value = "주간"; 
+      if(startHourEl) startHourEl.value = "09"; if(startMinuteEl) startMinuteEl.value = "00";
+      if(endHourEl) endHourEl.value = "18"; if(endMinuteEl) endMinuteEl.value = "00";
+      if(leaveStartDateEl) leaveStartDateEl.value = dateStr; 
+      if(leaveEndDateEl) leaveEndDateEl.value = dateStr;  
+      if(workRecordForm) workRecordForm.dataset.mode = "add"; 
+      currentEditingRecordOriginalKey = null; 
+      if(saveRecordBtn) saveRecordBtn.textContent = "저장";
     }
+    toggleTimeFields(); 
+    if(modal) modal.style.display = 'block';
   }
-
-  if (missingElement) {
-    console.error(`openModalForDate: 필수 모달 요소 중 "${missingElement}"을(를) 찾을 수 없습니다 (값이 null 또는 undefined). HTML ID를 확인해주세요.`);
-    // 어떤 요소가 문제인지 사용자에게도 간단히 알릴 수 있습니다 (선택 사항).
-    // showStatusMessage(`오류: ${missingElement} 요소를 찾을 수 없습니다.`, false);
-    return; 
-  }
-  // 모든 요소가 정상이면 이후 로직 실행
-  console.log("[openModalForDate] 모든 필수 DOM 요소 확인 완료.");
-
-  // --- 이하 기존 openModalForDate 함수 로직 ---
-  workRecordForm.reset(); 
-  repeatOnWeekdayCheckbox.checked = false; 
-  if(notesEl) notesEl.value = ""; 
   
-  const repeatLabelElement = document.querySelector('label[for="repeatOnWeekday"]');
-
-  if (existingRecordDataWithIdentifier) { 
-    const existingRecord = existingRecordDataWithIdentifier; 
-    // ... (수정 모드 로직 - 이전 최종본과 동일하게 유지) ...
-    modalTitle.textContent = `${existingRecord.date} 근무 기록 수정`; recordDateEl.value = existingRecord.date; 
-    staffNameEl.value = existingRecord.name; workTypeEl.value = existingRecord.workType;
-    if (existingRecord.workType === '휴무') {
-      leaveStartDateEl.value = existingRecord.date; leaveEndDateEl.value = existingRecord.date;  
-    } else if (existingRecord.workType !== '휴가') { 
-      if (existingRecord.startTime && /^\d{2}:\d{2}$/.test(existingRecord.startTime)) { const [startH, startM] = existingRecord.startTime.split(':'); startHourEl.value = startH; startMinuteEl.value = startM; } else { startHourEl.value = "00"; startMinuteEl.value = "00";}
-      if (existingRecord.endTime && /^\d{2}:\d{2}$/.test(existingRecord.endTime)) { const [endH, endM] = existingRecord.endTime.split(':'); endHourEl.value = endH; endMinuteEl.value = endM; } else { endHourEl.value = "00"; endMinuteEl.value = "00";}
-    } else { startHourEl.value = "00"; startMinuteEl.value = "00"; endHourEl.value = "00"; endMinuteEl.value = "00"; }
-    notesEl.value = existingRecord.notes || ""; workRecordForm.dataset.mode = "edit"; 
-    try { currentEditingRecordOriginalKey = JSON.parse(existingRecord.identifier); } catch(e) { currentEditingRecordOriginalKey = null; }
-    saveRecordBtn.textContent = "수정";
-    // if (repeatLabelElement) repeatLabelElement.style.display = 'none'; // toggleTimeFields에서 처리
-    // if(repeatOnWeekdayCheckbox) repeatOnWeekdayCheckbox.style.display = 'none';
-  } else { 
-    modalTitle.textContent = `${dateStr} 근무 기록 추가`; recordDateEl.value = dateStr;
-    if(staffNameEl) staffNameEl.value = ""; if(workTypeEl) workTypeEl.value = "주간"; 
-    if(startHourEl) startHourEl.value = "09"; if(startMinuteEl) startMinuteEl.value = "00";
-    if(endHourEl) endHourEl.value = "18"; if(endMinuteEl) endMinuteEl.value = "00";
-    if(leaveStartDateEl) leaveStartDateEl.value = dateStr; 
-    if(leaveEndDateEl) leaveEndDateEl.value = dateStr;  
-    workRecordForm.dataset.mode = "add"; currentEditingRecordOriginalKey = null; saveRecordBtn.textContent = "저장";
-    // if (repeatLabelElement) repeatLabelElement.style.display = (workTypeEl && workTypeEl.value === '휴가' ? 'none' : 'flex'); // toggleTimeFields에서 처리
-    // if (repeatOnWeekdayCheckbox) repeatOnWeekdayCheckbox.style.display = (workTypeEl && workTypeEl.value === '휴가' ? 'none' : 'inline-block');
-  }
-  toggleTimeFields(); 
-  if(modal) modal.style.display = 'block';
-}
   function openModalForEdit(entryElement) { 
-      console.log("[openModalForEdit] 호출됨. EntryElement:", entryElement);
       const recordDataString = entryElement.dataset.recordData; const recordIdentifierString = entryElement.dataset.recordIdentifier;
       if (recordDataString && recordIdentifierString) { const recordToEdit = JSON.parse(recordDataString); recordToEdit.identifier = recordIdentifierString; openModalForDate(recordToEdit.date, recordToEdit); } 
       else { console.error("수정할 레코드 정보를 찾을 수 없습니다.", entryElement.dataset); showStatusMessage("레코드 정보를 불러오지 못했습니다.", false); }
@@ -414,8 +523,8 @@ function openModalForDate(dateStr, existingRecordDataWithIdentifier = null) {
     } else if (selectedType === '휴가') {
       timeFieldsEl.style.display = 'none'; leavePeriodFieldsEl.style.display = 'none';
       if (isEditMode) { repeatContainer.style.display = 'none'; repeatOnWeekdayCheckbox.checked = false; } 
-      else { repeatContainer.style.display = 'block'; } // `block` 또는 `flex` (CSS에 따라)
-    } else { // 주간, 마감
+      else { repeatContainer.style.display = 'block'; } 
+    } else { 
       timeFieldsEl.style.display = 'block'; leavePeriodFieldsEl.style.display = 'none';
       if (isEditMode) { repeatContainer.style.display = 'none'; repeatOnWeekdayCheckbox.checked = false; } 
       else { repeatContainer.style.display = 'block'; }
@@ -479,10 +588,11 @@ function openModalForDate(dateStr, existingRecordDataWithIdentifier = null) {
 
   // --- 일일 근무 요약 팝업 관련 ---
   if(addWorkFromSummaryBtn) addWorkFromSummaryBtn.onclick = () => { if (dailySummaryDateDisplayEl && dailySummaryDateDisplayEl.dataset.currentDate) { openModalForDate(dailySummaryDateDisplayEl.dataset.currentDate); if(dailySummaryModal) dailySummaryModal.style.display = 'none'; }};
-  if(toggleHolidayBtn) toggleHolidayBtn.onclick = () => { if (dailySummaryDateDisplayEl && dailySummaryDateDisplayEl.dataset.currentDate) { const dateStr = dailySummaryDateDisplayEl.dataset.currentDate; const dayNumberElOnCalendar = calendarEl.querySelector(`.calendar-day[data-date="${dateStr}"] .day-number`); toggleHoliday(dateStr, dayNumberElOnCalendar); updateHolidayButtonInPopup(dateStr); }};
+  if(toggleHolidayBtn) toggleHolidayBtn.onclick = () => { if (dailySummaryDateDisplayEl && dailySummaryDateDisplayEl.dataset.currentDate) { const dateStr = dailySummaryDateDisplayEl.dataset.currentDate; const dayNumberElOnCalendar = calendarEl.querySelector(`.calendar-day[data-date="${dateStr}"] .day-number`); toggleHoliday(dateStr, dayNumberElOnCalendar); /* updateHolidayButtonInPopup은 toggleHoliday 내부에서 호출 또는 여기서도 호출 */ }};
   function updateHolidayButtonInPopup(dateStr) { if (!toggleHolidayBtn) return; if (currentMonthHolidays.includes(dateStr)) { toggleHolidayBtn.textContent = "✓ 휴일 지정됨"; toggleHolidayBtn.classList.add('is-holiday'); } else { toggleHolidayBtn.textContent = "이 날을 휴일로 지정"; toggleHolidayBtn.classList.remove('is-holiday'); }}
   function openDailySummaryPopup(dateStr, dayNumberElOnCalendarArgument) { 
-    if (!dailySummaryModal || !dailySummaryDateDisplayEl || !dailySummaryWorkListEl || !toggleHolidayBtn) return;
+    console.log(`[openDailySummaryPopup] 호출됨: ${dateStr}`);
+    if (!dailySummaryModal || !dailySummaryDateDisplayEl || !dailySummaryWorkListEl || !toggleHolidayBtn) {console.error("Daily summary modal elements not found"); return;}
     const dateObjForDisplay = new Date(dateStr + "T00:00:00");
     dailySummaryDateDisplayEl.textContent = `${dateStr} (${WEEKDAYS_KO[dateObjForDisplay.getDay()]}) 근무 요약`;
     dailySummaryDateDisplayEl.dataset.currentDate = dateStr; 
@@ -499,14 +609,22 @@ function openModalForDate(dateStr, existingRecordDataWithIdentifier = null) {
   if(closeStatsModalBtnElem) closeStatsModalBtnElem.onclick = () => { if(statsModal) statsModal.style.display = 'none'; };
   if(statsStaffSelect) statsStaffSelect.addEventListener('change', displayStaffStats);
   async function openStatsModal() { 
-    if (staffListCache.length === 0) await fetchStaffNames(); 
-    if(!statsStaffSelect || !statsMonthYearLabel || !statsModal) return;
-    // 직원 선택 드롭다운은 fetchStaffNames에서 이미 채워짐
-    await displayStaffStats(); // 초기 "직원 선택" 프롬프트 표시
+    console.log("[openStatsModal] 호출됨");
+    if (staffListCache.length === 0) {
+        console.log("[openStatsModal] staffListCache 비어있음. fetchStaffNames 호출.");
+        await fetchStaffNames(); 
+    }
+    if(!statsStaffSelect || !statsMonthYearLabel || !statsModal) { console.error("openStatsModal: 필수 통계 모달 요소 없음"); return;}
+    if (statsStaffSelect.options.length <= 1 && staffListCache.length > 0) { 
+        staffListCache.forEach(staff => {
+          const option = document.createElement('option'); option.value = staff.name; option.textContent = staff.name; statsStaffSelect.appendChild(option);
+        });
+    }
+    await displayStaffStats(); 
     if(statsModal) statsModal.style.display = 'block';
   }
   async function displayStaffStats() { 
-    if(!statsTableContainer || !statsSummaryContainer || !statsStaffSelect) return;
+    if(!statsTableContainer || !statsSummaryContainer || !statsStaffSelect) { console.error("displayStaffStats: 필수 통계 테이블/요약 요소 없음"); return;}
     const selectedStaff = statsStaffSelect.value; const year = currentDisplayedDate.getFullYear(); const month = currentDisplayedDate.getMonth() + 1;
     if(statsMonthYearLabel) statsMonthYearLabel.textContent = `${year}년 ${month}월 통계`;
     if (selectedStaff === "") { statsTableContainer.innerHTML = `<p class="stats-placeholder-message">확인하고 싶은 직원 이름을 선택해주세요. ☝️</p>`; statsSummaryContainer.innerHTML = ""; return; }
@@ -539,20 +657,19 @@ function openModalForDate(dateStr, existingRecordDataWithIdentifier = null) {
     highlightedStaffName = null; 
     if(staffListUlEl){ const currentActiveLi = staffListUlEl.querySelector('.active-highlight'); if (currentActiveLi) currentActiveLi.classList.remove('active-highlight');}
     const year = currentDisplayedDate.getFullYear(); const month = currentDisplayedDate.getMonth() + 1;
-    renderCalendar(year, month); // renderCalendar 시작 시 loadHolidaysForMonth 호출됨
+    renderCalendar(year, month);
   });
   if(nextMonthBtn) nextMonthBtn.addEventListener('click', () => { 
     currentDisplayedDate.setMonth(currentDisplayedDate.getMonth() + 1); 
     highlightedStaffName = null;
     if(staffListUlEl){ const currentActiveLi = staffListUlEl.querySelector('.active-highlight'); if (currentActiveLi) currentActiveLi.classList.remove('active-highlight');}
     const year = currentDisplayedDate.getFullYear(); const month = currentDisplayedDate.getMonth() + 1;
-    renderCalendar(year, month); // renderCalendar 시작 시 loadHolidaysForMonth 호출됨
+    renderCalendar(year, month);
   });
   
   // --- 앱 초기화 ---
   async function initializeApp() {
     console.log("앱 초기화 시작...");
-    await new Promise(resolve => setTimeout(resolve, 0)); // DOM 요소가 확실히 준비될 시간을 줌
     
     populateHourOptions(startHourEl); 
     populateMinuteOptions(startMinuteEl); 

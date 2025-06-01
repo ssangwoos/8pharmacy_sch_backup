@@ -1,4 +1,4 @@
-/* style.css (전체 코드 - 2025-06-02 모든 기능 스타일 포함) */
+/* style.css (전체 코드 - 2025-06-03 최종 검토) */
 body {
   font-family: 'Malgun Gothic', '맑은 고딕', Dotum, '돋움', sans-serif;
   margin: 0;
@@ -176,7 +176,6 @@ body {
   position: relative;
   display: flex;
   flex-direction: column;
-  /* cursor: pointer; 는 dayNumberEl과 work-entries-container에 개별 설정 */
 }
 .calendar-day:hover {
   background-color: #e8f4f8;
@@ -213,7 +212,7 @@ body {
   color: red !important; 
   font-weight: bold;
 }
-.calendar-day.saturday .day-number:not(.holiday-date-number) { /* 휴일이 아닌 토요일 */
+.calendar-day.saturday .day-number:not(.holiday-date-number) { 
   color: blue;
 }
 .calendar-day.today .day-number:not(.holiday-date-number):not(.sunday-date-number) {
@@ -227,26 +226,29 @@ body {
 .calendar-day.today .day-number.holiday-date-number { 
   color: red !important;
 }
-.calendar-day > .work-entries-container { /* 빈 공간 클릭 위해 */
-    cursor: pointer;
-    flex-grow: 1; /* day-number 제외한 나머지 공간 차지 */
+.calendar-day > .work-entries-container, .calendar-day {
+    cursor: pointer; /* 셀의 빈 공간 클릭을 위함 */
+}
+.calendar-day .day-number {
+    cursor: pointer; /* 날짜 숫자는 일일 요약 팝업용 */
 }
 
 
 /* --- 시간 막대 그래프 스타일 --- */
 .work-entries-container {
-  /* flex-grow: 1; 이미 위에서 설정 */
+  flex-grow: 1;
   position: relative;
   display: flex; 
   flex-direction: column; 
   gap: 2px; 
+  cursor: default; 
 }
 
 .work-entry {
   position: absolute; 
   height: 18px;     
   line-height: 18px; 
-  font-size: 1.04em;  /* 요청사항: 130% 확대됨 (0.8em * 1.3) */
+  font-size: 1.04em;  /* 폰트 크기 */
   padding: 0 5px;    
   border-radius: 3px;
   color: #fff; 
@@ -272,281 +274,97 @@ body {
 }
 
 /* 달력 내 근무 기록 강조 스타일 */
-.work-entry.dimmed {
-  opacity: 0.3;
-}
-.work-entry.highlighted {
-  opacity: 1;
-  transform: scale(1.02); 
-  box-shadow: 0 1px 4px rgba(0,0,0,0.4); 
-  z-index: 10; 
-}
+.work-entry.dimmed { opacity: 0.3; }
+.work-entry.highlighted { opacity: 1; transform: scale(1.02); box-shadow: 0 1px 4px rgba(0,0,0,0.4); z-index: 10; }
 
 /* 삭제 버튼 스타일 */
 .work-entry .delete-btn {
-  position: absolute;
-  top: 1px;
-  right: 3px;
-  font-size: 14px; 
-  font-weight: bold;
-  color: #ffdddd; 
-  background-color: rgba(0, 0, 0, 0.1); 
-  border: none;
-  border-radius: 50%;
-  width: 16px;  
-  height: 16px; 
-  line-height: 16px; 
-  text-align: center;
-  cursor: pointer;
-  display: none; 
-  padding: 0;
-  user-select: none; 
+  position: absolute; top: 1px; right: 3px; font-size: 14px; font-weight: bold;
+  color: #ffdddd; background-color: rgba(0, 0, 0, 0.1); border: none;
+  border-radius: 50%; width: 16px; height: 16px; line-height: 16px; 
+  text-align: center; cursor: pointer; display: none; padding: 0; user-select: none; 
 }
-.work-entry:hover .delete-btn {
-  display: block; 
-}
-.work-entry .delete-btn:hover {
-  background-color: rgba(200, 0, 0, 0.7); 
-  color: white; 
-}
+.work-entry:hover .delete-btn { display: block; }
+.work-entry .delete-btn:hover { background-color: rgba(200, 0, 0, 0.7); color: white; }
 
 
 /* --- 모달 스타일 --- */
 .modal {
-  display: none;
-  position: fixed;
-  z-index: 1000;
-  left: 0;
-  top: 0;
-  width: 100%;
-  height: 100%;
-  overflow: auto;
-  background-color: rgba(0,0,0,0.6);
+  display: none; position: fixed; z-index: 1000; left: 0; top: 0;
+  width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.6);
 }
-
 .modal-content {
-  background-color: #fefefe;
-  margin: 8% auto;
-  padding: 20px;
-  border: 1px solid #888;
-  width: 90%;
-  max-width: 450px; 
-  border-radius: 4px;
-  box-shadow: 0 4px 10px rgba(0,0,0,0.2);
-  position: relative;
+  background-color: #fefefe; margin: 8% auto; padding: 20px; border: 1px solid #888;
+  width: 90%; max-width: 450px; border-radius: 4px; box-shadow: 0 4px 10px rgba(0,0,0,0.2); position: relative;
 }
-
 .close-button {
-  color: #aaa;
-  font-size: 24px;
-  font-weight: bold;
-  position: absolute;
-  top: 8px;
-  right: 15px;
-  line-height: 1;
+  color: #aaa; font-size: 24px; font-weight: bold; position: absolute;
+  top: 8px; right: 15px; line-height: 1;
 }
 .close-button:hover, .close-button:focus { color: black; text-decoration: none; cursor: pointer; }
 
 /* --- 근무 입력 모달 폼 스타일 --- */
-#workRecordForm div:not(.time-select-group):not(.time-inputs):not(#repeatContainer):not(#leavePeriodFields) {
-  margin-bottom: 12px; 
+#workRecordForm div:not(.time-select-group):not(.time-inputs):not(#repeatContainer):not(#leavePeriodFields) { margin-bottom: 12px; }
+#leavePeriodFields { margin-bottom: 12px; }
+#leavePeriodFields .time-select-group { margin-bottom: 8px; }
+#leavePeriodFields input[type="date"].date-input-full-width { flex-grow: 1; min-width: 150px; }
+#workRecordForm label { display: block; margin-bottom: 4px; font-weight: bold; color: #444; font-size:0.9em; }
+#workRecordForm input[type="date"]:not(.date-input-full-width),
+#workRecordForm select, #workRecordForm textarea {
+  width: calc(100% - 18px); padding: 8px; border: 1px solid #ccc;
+  border-radius: 3px; box-sizing: border-box; font-size: 0.95em;
 }
-#leavePeriodFields { /* 휴무 기간 필드 그룹 */
-  margin-bottom: 12px;
-  /* display: none; 기본은 JS에서 제어 */
+#workRecordForm input#recordDate { background-color: #f0f0f0; }
+#workRecordForm .time-select-group { display: flex; align-items: center; margin-bottom: 10px; }
+#workRecordForm .time-select-group label { margin-bottom: 0; margin-right: 10px; min-width: 60px; flex-shrink: 0; }
+#workRecordForm .time-inputs { display: flex; align-items: center; flex-grow: 1; }
+#workRecordForm .time-inputs select { min-width: 55px; padding: 8px 5px; margin-right: 2px; font-size: 0.9em; flex-grow: 1; border: 1px solid #ccc; border-radius: 3px; box-sizing: border-box; }
+#workRecordForm .time-inputs span { margin-left: 2px; margin-right: 8px; font-size: 0.9em; flex-shrink: 0; }
+#workRecordForm #repeatContainer, /* ID로 참조할 경우 */
+#workRecordForm .checkbox-label { /* 클래스로 참조할 경우 */
+  display: flex; align-items: center; font-weight: normal; 
+  font-size: 0.9em; margin-bottom: 15px; color: #444; 
 }
-#leavePeriodFields .time-select-group { /* 내부 그룹 간격 */
-  margin-bottom: 8px; 
-}
-#leavePeriodFields input[type="date"].date-input-full-width { 
-    width: calc(100% - 70px - 18px); /* 레이블너비(60)+마진(10) 과 input 자체 패딩/보더(18) 제외 */
-    /* 위 계산이 복잡하면 그냥 width: 60%; flex-grow:1; 등 사용 */
-    /* 또는 time-inputs 내부의 select와 유사하게 */
-    flex-grow: 1;
-    min-width: 150px; /* 최소 너비 */
-}
-/* #workRecordForm input#recordDate 는 readonly이므로 아래 일반 input에서 제외 */
-#workRecordForm input[type="date"]:not(#recordDate), /* 휴무 기간 입력 필드 */
-#workRecordForm select, 
-#workRecordForm textarea {
-  width: calc(100% - 18px); 
-  padding: 8px;
-  border: 1px solid #ccc;
-  border-radius: 3px;
-  box-sizing: border-box;
-  font-size: 0.95em;
-}
-#workRecordForm input#recordDate { /* 날짜 필드는 readonly */
-    background-color: #f0f0f0;
-    width: calc(100% - 18px); 
-    padding: 8px;
-    border: 1px solid #ccc;
-    border-radius: 3px;
-    box-sizing: border-box;
-    font-size: 0.95em;
-}
-
-
-#workRecordForm label { 
-  display: block; 
-  margin-bottom: 4px; 
-  font-weight: bold; 
-  color: #444; 
-  font-size:0.9em; 
-}
-
-#workRecordForm .time-select-group {
-  display: flex; 
-  align-items: center; 
-  margin-bottom: 10px;
-}
-
-#workRecordForm .time-select-group label { 
-  margin-bottom: 0; 
-  margin-right: 10px; 
-  min-width: 60px; 
-  flex-shrink: 0;
-}
-
-#workRecordForm .time-inputs { 
-  display: flex;
-  align-items: center;
-  flex-grow: 1;
-}
-
-#workRecordForm .time-inputs select { 
-  min-width: 55px; 
-  padding: 8px 5px; 
-  margin-right: 2px; 
-  font-size: 0.9em; 
-  flex-grow: 1; 
-  border: 1px solid #ccc; 
-  border-radius: 3px; 
-  box-sizing: border-box; 
-}
-
-#workRecordForm .time-inputs span { 
-  margin-left: 2px; 
-  margin-right: 8px; 
-  font-size: 0.9em;
-  flex-shrink: 0;
-}
-
-#workRecordForm #repeatContainer, /* ID로 참조 */
-#workRecordForm .checkbox-label { /* 클래스로도 참조 가능 */
-  display: flex; 
-  align-items: center;
-  font-weight: normal; 
-  font-size: 0.9em;
-  margin-bottom: 15px; 
-  color: #444; 
-}
-#workRecordForm .checkbox-label input[type="checkbox"] {
-  width: auto; 
-  margin-right: 8px;
-  vertical-align: middle; 
-}
-
-#workRecordForm textarea { 
-  min-height: 70px; 
-  resize: vertical; 
-}
-
+#workRecordForm .checkbox-label input[type="checkbox"] { width: auto; margin-right: 8px; vertical-align: middle; }
+#workRecordForm textarea { min-height: 70px; resize: vertical; }
 #workRecordForm button[type="submit"] {
-  background-color: #5cb85c;
-  color: white;
-  padding: 10px 18px;
-  border: none;
-  border-radius: 3px;
-  cursor: pointer;
-  font-size: 1em;
-  width: 100%;
-  margin-top: 10px; 
+  background-color: #5cb85c; color: white; padding: 10px 18px; border: none;
+  border-radius: 3px; cursor: pointer; font-size: 1em; width: 100%; margin-top: 10px; 
 }
-#workRecordForm button[type="submit"]:hover { 
-  background-color: #4cae4c; 
-}
+#workRecordForm button[type="submit"]:hover { background-color: #4cae4c; }
 
 /* --- 통계 모달 --- */
-.stats-modal-content {
-  max-width: 750px;
-  margin: 5% auto;
-}
-.stats-controls { /* ... 이전과 동일 ... */ }
-#statsStaffSelect { /* ... 이전과 동일 ... */ }
-#statsMonthYearLabel { /* ... 이전과 동일 ... */ }
-#statsTableContainer table { /* ... 이전과 동일 ... */ }
-#statsTableContainer th, #statsTableContainer td { /* ... 이전과 동일 ... */ }
-#statsTableContainer td.notes-cell { /* ... 이전과 동일 ... */ }
-#statsTableContainer th { /* ... 이전과 동일 ... */ }
+.stats-modal-content { max-width: 750px; margin: 5% auto; }
+.stats-controls { margin-bottom: 20px; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.stats-controls label { font-weight: normal; color: #333; margin-bottom: 0; }
+#statsStaffSelect { width: 180px; padding: 8px; font-size: 0.9em; border: 1px solid #ccc; border-radius: 3px; }
+#statsMonthYearLabel { font-weight: bold; font-size: 1.1em; margin-left: auto; }
+#statsTableContainer table { width: 100%; border-collapse: collapse; margin-bottom: 20px; font-size: 0.85em; }
+#statsTableContainer th, #statsTableContainer td { border: 1px solid #ddd; padding: 7px; text-align: center; }
+#statsTableContainer th:first-child, #statsTableContainer td:first-child, 
+#statsTableContainer td:nth-child(2), #statsTableContainer td:nth-child(3) { text-align: left; }
+#statsTableContainer td.notes-cell { max-width: 100px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-align: left; }
+#statsTableContainer th { background-color: #f2f2f2; font-weight: bold; }
 #statsTableContainer td.saturday-text { color: blue; }
 #statsTableContainer td.sunday-text { color: red; }
-#statsSummaryContainer { /* ... 이전과 동일 ... */ }
-#statsSummaryContainer div { /* ... 이전과 동일 ... */ }
-#statsSummaryContainer h4 { /* ... 이전과 동일 ... */ }
-#statsSummaryContainer .total-hours-summary { /* ... 이전과 동일 ... */ }
-.stats-placeholder-message { /* ... 이전과 동일 ... */ }
+#statsSummaryContainer { margin-top: 20px; padding-top: 15px; border-top: 1px solid #eee; font-size: 0.9em; }
+#statsSummaryContainer div { margin-bottom: 6px; padding-left: 10px; }
+#statsSummaryContainer h4 { margin-top:0; margin-bottom: 10px; font-size: 1.05em; padding-left: 0; }
+#statsSummaryContainer .total-hours-summary { font-weight: bold; color: #007bff; font-size: 1.1em; margin-top:12px; border-top: 1px dashed #ccc; padding-top: 10px; }
+.stats-placeholder-message { text-align: center; font-size: 1.05em; color: #6c757d; padding: 50px 20px; border: 1px dashed #ced4da; border-radius: 4px; background-color: #f8f9fa; margin-top: 10px; }
 
 /* --- 일일 근무 요약 모달 --- */
-.daily-summary-modal-content {
-  max-width: 500px; /* 너비 조정 */
-  padding: 20px;
-}
-#dailySummaryDateDisplay { 
-  font-size: 1.3em;
-  font-weight: bold;
-  color: #333;
-  margin-bottom: 15px;
-  text-align: center;
-}
-.daily-summary-controls {
-  display: flex;
-  justify-content: space-between; 
-  align-items: center;
-  margin-bottom: 20px;
-  padding-bottom: 15px;
-  border-bottom: 1px solid #eee;
-  gap: 10px; 
-}
-.daily-summary-controls button {
-  padding: 7px 12px; 
-  font-size: 0.85em;
-  border-radius: 4px;
-  cursor: pointer;
-  border: 1px solid transparent; 
-  transition: background-color 0.2s ease, border-color 0.2s ease;
-  flex-grow: 1; /* 버튼들이 공간을 균등하게 차지 */
-}
-.daily-summary-controls button:first-child { margin-right: 5px;}
-.daily-summary-controls button:last-child { margin-left: 5px;}
-
-
-#toggleHolidayBtn {
-  background-color: #6c757d; /* 기본 회색톤 */
-  border-color: #5a6268;
-  color: white;
-}
-#toggleHolidayBtn:hover {
-  background-color: #5a6268;
-}
-#toggleHolidayBtn.is-holiday { 
-    background-color: #dc3545; /* 휴일 지정 시 빨간색 */
-    border-color: #bd2130;
-    color: white;
-}
-#toggleHolidayBtn.is-holiday:hover {
-    background-color: #c82333;
-}
-
-#addWorkFromSummaryBtn.add-work-btn { 
-  background-color: #007bff; 
-  border-color: #0069d9;
-  color: white;
-}
-#addWorkFromSummaryBtn.add-work-btn:hover {
-  background-color: #0069d9;
-}
-
+.daily-summary-modal-content { max-width: 500px; padding: 20px; } /* 너비 조정 */
+#dailySummaryDateDisplay { font-size: 1.3em; font-weight: bold; color: #333; margin-bottom: 15px; text-align: center; }
+.daily-summary-controls { display: flex; justify-content: space-around; align-items: center; margin-bottom: 20px; padding-bottom: 15px; border-bottom: 1px solid #eee; gap: 10px; }
+.daily-summary-controls button { padding: 7px 12px; font-size: 0.85em; border-radius: 4px; cursor: pointer; border: 1px solid transparent; transition: background-color 0.2s ease, border-color 0.2s ease; flex-grow: 1; }
+.daily-summary-controls button:first-child { margin-right: 5px;} .daily-summary-controls button:last-child { margin-left: 5px;}
+#toggleHolidayBtn { background-color: #6c757d; border-color: #5a6268; color: white; }
+#toggleHolidayBtn:hover { background-color: #5a6268; }
+#toggleHolidayBtn.is-holiday { background-color: #dc3545; border-color: #c82333; color: white; } /* 휴일 지정 시 빨간색 */
+#toggleHolidayBtn.is-holiday:hover { background-color: #c82333; }
+#addWorkFromSummaryBtn.add-work-btn { background-color: #007bff; border-color: #0069d9; color: white; }
+#addWorkFromSummaryBtn.add-work-btn:hover { background-color: #0069d9; }
 #dailySummaryWorkList ul { list-style: none; padding: 0; margin: 0; }
 #dailySummaryWorkList li { display: flex; align-items: center; padding: 8px 0; border-bottom: 1px dotted #f0f0f0; }
 #dailySummaryWorkList li:last-child { border-bottom: none; }
@@ -579,7 +397,7 @@ body {
   #staffListUl li { font-size: 0.9em; }
   .calendar-day { min-height: 100px; font-size: 0.8em; }
   .calendar-day .day-number { font-size: 0.9em; }
-  .work-entry { height: 17px; line-height: 17px; font-size: 1.04em; }
+  .work-entry { height: 17px; line-height: 17px; font-size: 1.04em; } /* 모바일에서도 막대 내 폰트 1.04em 유지 */
   .work-entry .delete-btn { width: 18px; height: 18px; line-height: 18px; font-size: 16px; }
   .modal-content { width: 95%; margin: 5% auto; padding: 15px; font-size: 0.95em; }
   .stats-modal-content { max-width: 95%; }
@@ -588,7 +406,7 @@ body {
   #workRecordForm .time-select-group label { margin-bottom: 5px; }
   #workRecordForm .time-inputs { width: 100%; }
   #workRecordForm .time-inputs select { min-width: 60px; }
-  #leavePeriodFields input[type="date"].date-input-full-width { width: 100%; /* 모바일에서 휴무 기간 날짜 입력 필드 꽉차게 */ box-sizing: border-box; padding: 8px; }
+  #leavePeriodFields input[type="date"].date-input-full-width { width: 100%; box-sizing: border-box; padding: 8px; }
   #statsTableContainer table { font-size: 0.75em; }
   #statsTableContainer th, #statsTableContainer td { padding: 4px; }
   #statsTableContainer td.notes-cell { max-width: 60px; }
