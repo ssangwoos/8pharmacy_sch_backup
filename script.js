@@ -1,7 +1,7 @@
 // script.js (전체 코드 - 2025-05-29 최종 수정본 v2)
 
 // 중요!! 본인의 Apps Script 웹 앱 URL로 반드시 교체하세요.
-const APPS_SCRIPT_WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbz5nGNr7MpKYnV3l_sh6kzOn4g7GFPtiHATpymBcaZjteUIWxdxeV6xzcvyfOq0Exq0/exec'; 
+const APPS_SCRIPT_WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbwQqLERmT9GvvIQC6xIbbXkgiE_OJfNEFZLNbilhrBpwwvZfh56AEXajVyiSfqWBR_m6w/exec'; 
 
 document.addEventListener('DOMContentLoaded', () => {
   // DOM 요소 가져오기
